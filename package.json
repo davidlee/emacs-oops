@@ -19,7 +19,7 @@
     "prettier-check": "pnpm exec prettier --config .prettierrc -c 'src/**/*.ts' 'test/**/*.ts'",
     "prettier-watch": "pnpm exec onchange 'src/**/*.ts' 'test/**/*.ts' -- pnpm exec prettier --config .prettierrc -w {{changed}}",
     "prep": "pnpm run prettier & pnpm run lint && pnpm test",
-    "deps": "pnpm exec depcruise -c .dependency-cruiser.cjs -x Migration*.ts -x repl.ts -I src -T dot . | dot -T svg > doc/graph.svg && open -a Arc doc/graph.svg",
+    "deps": "pnpm exec depcruise -c .dependency-cruiser.cjs -x '(migration|repl)' -I src -T dot . | dot -T svg > doc/graph.svg && open -a Arc doc/graph.svg",
     "repl": "node --loader ts-node/esm src/repl.ts"
   },
   "husky": {
