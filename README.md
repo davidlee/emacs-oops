@@ -2,73 +2,39 @@
 
 ## philosophy
 
-- UX designed to minimise friction for power users
-- Maximise expressive power through careful choice and combination of simple
-components
-- Be fast.
-- Be simple.
-- Everything is an entry
-- Nondestructive / event-oriented data
-- Plugin system: users can extend with JS / TS; user definitions are as powerful as built ins
-- Aggressive separation of concerns. CLI, TUI, web front ends. 
-- Aspirational: Support for multiple datastore adapters.
-  - Local JSON file storage: 
-    - advantages
-      - easy cross-device sync / interop
-      - easy git backup
-      + flexibility / power of plugin architecture
-    - disadvantages
-      - performance may be problematic
-      - algorithmic complexity pushed into application code
-        - validation, retrieval, conversion
-        - filtering and object hydration
-        - tree stuctures
-  - SQLite 
-    - advantages
-      + performance(!)
-      + portability
-      + application complexity
-      + WAL support somewhat mitigates backup / sync
-    - disadvantages
-      - no JSON support in Prisma
-      - file sync problematic
-      - no multiplayer
-  - Postgres
-    - advantages
-      + it's Postgres
-      + performance, features & stability
-      + JSON support in Prisma
-      + cloud deployment
-    - disadvantages
-      - portability
-      - installation complexity
-      - interop with file-based sync
-  - Prisma
-    - advantages
-      + design sucks less than ActiveRecord (the lib & pattern)
-      + nice provider of validation & safety
-      + Supports Postgres
-      + Supports mySQL
-        - but not JSON columns
-    - disadvantages
-      - may not (natively) support recursive structures
-      - no JSON support for sqlite
-  - MongoDB
-    - advantages
-      - Prisma support
-      - domain appropriate
-      - JSON support; document storage
-    - disadvantages
-      - it's MongoDB
-      - poor backup / interop / sync story
-      - research required
+- Maximise expressive power and flexibility, by
+  choosing and combining simple parts.
+- Performance is a feature. Be fast.
+- Programming is a war against complexity. Cheat, by
+  intentionally creating and taming emergent complexity.
+- Design for expert users.
+- Discoverability cultivates expertise.
+- Provide safety, by using nondestructive, event-oriented 
+  data.
+- Both hierarchies + taxonomies are necessary. Both should 
+  be first class concerns, with first class implementations.
+- The time dimension is critical.
+- Often, the reason we write something down is so that 
+  we are free to forget about it.
+- Prefer extensibility over tweakability.
+- Aggressively separate concerns. 
+- Use SQL (SQLite) for speed, and to keep application logic 
+  simple.
+- Support plain text for sync, backup and interoperability.
+- Play well with Markdown notes. Complement Obsidian and 
+  Google Calendar.
       
-
 # TODO
 
-filters
-  tags
-    groups -> tag[]
+- [/] crud operations for simple entries
+- [ ] simple tags
+- [ ] tag groups
+- [ ] statuses
+- [ ] confirmation for bulk edits
+- [ ] closure table entry hierarchies (triggers)
+- [ ] interactive TUI
+- [ ] interactive contexts
+- [ ] subcommands
 
 command -> interactive? -> confirmation(command)
 
