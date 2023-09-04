@@ -1,7 +1,7 @@
 import { uid } from './uid.js' 
 import { Entry } from './entities/Entry.js'
 import { ParsedCommandArgs } from './parser.js'
-import { EntryTypes, StatusNames } from './entry.js'
+import { EntryTypes, StatusNames } from './entities/Entry.js' 
 
 import eventChannel from './eventChannel.js'
 
@@ -46,35 +46,63 @@ export class CommandHandler {
     eventChannel.on('command:list', (args: Args) => {
      this.list(args)
     })
+
+    eventChannel.on('command:modify', (args: Args) => {
+     this.modify(args)
+    })
   }
 
   @UseRequestContext()
   async add(args: Args): Promise<void> {
-    const entry: Entry = this.repo.create({
-      text:    args.modifiers.words.join(' '), 
-      urgency: 1.0,
-      type:    EntryTypes.Transient,
-      status:  StatusNames.Draft,
-      path:    '/',
-      created: new Date(),
-      meta:    new JsonType(),
-      uid:     uid(),
-    }) 
-    await this.em.persistAndFlush(entry)
-    eventChannel.emit('created', { status: 'OK', id: entry.id, record: entry })
+    const text = args.modifiers.words.join(' ') 
+    const entry: Entry = new Entry(text)
+    const record: Entry = this.repo.create(entry)
+    // {
+    //   text:    text,
+    //   urgency: 1.0,
+    //   type:    EntryTypes.Transient,
+    //   status:  StatusNames.Capture,
+    //   created: new Date(),
+    //   meta:    new JsonType(),
+    //   uid:     uid(),
+    // }
+    
+    await this.em.persistAndFlush(record)
+    eventChannel.emit('created', { status: 'OK', id: record.id, record: record})
   }
 
   @UseRequestContext()
   async list(args: Args) {
     console.log("== LIST ==")
-    // TODO args -> conditions
-    const entries = await this.repo.findAll() // TODO filters
+    const f = args.filters
+    let q = {}
+    
+    if(f.words.length > 1) {
+      const x = { words: {$like: `%${f.words.join(' ')}%` }}
+      q = { ...q, ...x }
+    }
+    // TODO
+    
+    const entries = await this.repo.find(q) 
     eventChannel.emit('entries', entries)
     this.entries = entries
   }
 
-  modify(args: Args) {
-    args
+  async modify(args: Args) {
+    console.log('modify', args)
+    const f = args.filters
+    const m = args.modifiers
+    let q = {}
+    let a = {}
+
+    if(f.ids.length > 0) {
+      const x = {ids: f.ids }
+      q = { ...q, ...x}
+    }
+    // TODO
+    
+    ////
+    
   }
 
   remove(args: Args) {

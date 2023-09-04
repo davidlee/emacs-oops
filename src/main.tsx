@@ -34,8 +34,7 @@ function LogText({}) {
   const [log, setLog] = useState('...')
 
   eventChannel.on('entries',(entries: Entry[]) => {
-    setLog(entries.map((e) => `${e.id} : ${e.text} | ${e.created}` ).join("\n"))
-    console.log('spinner!!')
+    setLog(entries.map((e) => `${e.id} : ${e.uid} | ${e.text} | ${e.urgency}` ).join("\n"))
   })
 
   eventChannel.on('created',(entry: Entry) => {
