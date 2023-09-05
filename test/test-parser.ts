@@ -1,71 +1,125 @@
-import assert from 'node:assert/strict'
-import { after, describe, test } from 'node:test'
-import { parse, recogniseCommand, ParsedCommand } from '../src/parser.js'
+import { parse, ParsedCommand } from '../src/parser.js'
 import { CommandName } from '../src/commandHandler.js'
 
+import assert from 'node:assert/strict'
+import { before, after, describe, test } from 'node:test'
+
 describe('parser', () => {
-  describe('recogniseCommand', () => {
-    test('recognise: add', (t) => {
-      assert.equal(recogniseCommand('add')?.name, 'add')
-    })
-
-    test('recognise: ad -> add', (t) => {
-      assert.equal(recogniseCommand('ad')?.name, 'add')
-    })
-
-    test('null: addd', (t) => {
-      assert.equal(recogniseCommand('addd'), null)
-    })
-
-    test('recognise alias: rm -> remove', (t) => {
-      assert.equal(recogniseCommand('rm')?.name, 'remove')
-    })
-
-    test('recognise alias: @ -> context', (t) => {
-      assert.equal(recogniseCommand('@')?.name, 'context')
-    })
-
-    test('null: co', (t) => {
-      assert.equal(recogniseCommand('co'), null)
-    })
-
-    test('null: con', (t) => {
-      assert.equal(recogniseCommand('con'), null)
-    })
-
-    test('null: conz', (t) => {
-      assert.equal(recogniseCommand('conz'), null)
-    })
-
-    test('recognise: cont -> context', (t) => {
-      assert.equal(recogniseCommand('cont')?.name, 'context')
-    })
-
-    test('recognise: conf -> config', (t) => {
-      assert.equal(recogniseCommand('conf')?.name, 'config')
-    })
-  })
 
   describe('parse', () => {
-    // beforeAll(async () => orm = await initORMSqlite3());
-    // beforeEach(async () => orm.schema.clearDatabase());
+    function testWith(text: string, cn: CommandName, fn: ((p: ParsedCommand) => void)): void {
+      let result = parse(text.split(' ')) as ParsedCommand
+      assert.equal(result.command, cn)
+      fn(result)
+    }
+  
+    test('add', (t) => {
+      testWith('add', CommandName.add, (c) => {
+        assert.deepEqual(c.modifiers!.words, [])
+      })
+    })
 
-    test('add a note -> !add "a note"', (t) => {
-      let input = 'add a note'.split(' ')
-      let result = parse(input) as ParsedCommand
-      assert.deepEqual(result.command, CommandName.add)
-      assert.deepEqual(result.modifiers!.words, ['a', 'note'])
+    test('ad -> add', (t) => {
+      testWith('ad a list', CommandName.add, (c) => {
+        assert.deepEqual(c.modifiers!.words, ['a','list'])
+      })
+    })
+
+    test('addd -> ', (t) => {
+      testWith('addd', CommandName.list, (c) => {
+        assert.deepEqual(c.filters!.words, ['addd'])
+      })
+    })
+    
+    test('add a note', (t) => {
+      testWith('add a note', CommandName.add, (c) => {
+        assert.deepEqual(c.modifiers!.words, ['a', 'note'])
+      })
+    })
+
+    test('con -> null', (t) => {
+      testWith('con', CommandName.list, (c) => {
+        assert.deepEqual(c.filters!.words, ['con'  ])
+      })
+    })
+
+    test('conf -> config', (t) => {
+      testWith('conf', CommandName.config, (c) => {
+        assert.deepEqual(c.modifiers!.words, [])
+      })
+    })
+
+    test('cont -> context', (t) => {
+      testWith('cont', CommandName.context, (c) => {
+        assert.deepEqual(c.modifiers!.words, [])
+      })
     })
 
     test('default to list', (t) => {
-      let input = 'what dis'.split(' ')
-      let result = parse(input) as ParsedCommand
-      assert.deepEqual(result.command, CommandName.list)
-      assert.deepEqual(result.filters!.words, ['what', 'dis'])
+      testWith('what dis', CommandName.list, (c) => {
+        assert.deepEqual(c.filters!.words, ['what', 'dis'])
+      })
+    })
+    
+    test('list has filters but not modifiers', (t) => {
+      testWith('1 list', CommandName.list, (c) => {
+        assert.deepEqual(c.filters!.ids, [1])
+        assert.deepEqual(c.modifiers, undefined)
+      })
     })
 
-    after(() => {
+    test('list accepts ids on the RHS', (t) => {
+      testWith('list 1', CommandName.list, (c) => {
+        assert.deepEqual(c.filters!.ids, [1])
+        assert.equal(c.modifiers, undefined)
+      })
+    })
     
+    test('list expands ranges', (t) => {
+      testWith('2-4 list', CommandName.list, (c) => {
+        assert.deepEqual(c.filters!.ids, [2,3,4])
+        assert.equal(c.modifiers, undefined)
+      })
+      testWith('1-4,7-9 list', CommandName.list, (c) => {
+        assert.deepEqual(c.filters!.ids, [1,2,3,4,7,8,9])
+        assert.equal(c.modifiers, undefined)
+      })
+    })
+    
+    test('list interprets additional set of ids as words', (t) => {
+      testWith('11,12 13 15 list', CommandName.list, (c) => {
+        assert.deepEqual(c.filters!.ids, [11,12])
+        assert.deepEqual(c.filters!.words, ['13','15'])
+        assert.equal(c.modifiers, undefined)
+      })
+    })
+
+    test('list recognises a uid', (t) => {
+      testWith(':1iu46AE list', CommandName.list, (c) => {
+        assert.deepEqual(c.filters!.uids, ['1iu46AE'])
+        assert.deepEqual(c.filters!.words, [])
+        assert.equal(c.modifiers, undefined)
+      })
+    })
+    
+    test('list recognises any number of uids', (t) => {
+      testWith(':1iu46AE :1iu68x9 list :1ip658ih', CommandName.list, (c) => {
+        assert.deepEqual(c.filters!.uids, ['1iu46AE', '1iu68x9', '1ip658ih'])
+        assert.deepEqual(c.filters!.words, [])
+        assert.equal(c.modifiers, undefined)
+      })
+    })
+
+    test('rm (alias: remove)', (t) => {
+      testWith('rm', CommandName.remove, (c) => {
+        assert.deepEqual(c.filters!.ids, [])
+      })
+    })
+
+    test('@ (alias: context)', (t) => {
+      testWith('@ home', CommandName.context, (c) => {
+        assert.deepEqual(c.modifiers!.words, ['home'])
+      })
     })
   })
 

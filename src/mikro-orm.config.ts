@@ -14,9 +14,6 @@ export const config: Options = {
   extensions:      [Migrator],
   highlighter:      new SqlHighlighter(),
   
-  // allowGlobalContext: true, // WARNING
-  
-  // as we are using class references here, we don't need to specify `entitiesTs` option
   // metadataProvider: TsMorphMetadataProvider,
   migrations: {
     tableName:     'mikro_orm_migrations', // migrations table name
