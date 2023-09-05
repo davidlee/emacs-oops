@@ -9,14 +9,19 @@ enum TokenKind {
 import { CommandName } from './commandHandler.js'
 
 export type CommandConfig = {
-  name:          CommandName
-  aliases:       string[]
-  expect:        TokenKind[]
-  subcommands:   CommandConfig[] 
-  confirmation?: boolean 
+  name:         CommandName
+  aliases:      string[]
+  expect:       TokenKind[]
+  subcommands?: CommandConfig[] 
 }
 
 const CommandConfigs: CommandConfig[] = [
+  {
+    name: CommandName.list,
+    aliases: ['ls'],
+    expect: [TokenKind.Filter],
+    subcommands: [],
+  },
   {
     name: CommandName.add,
     aliases: [],
@@ -32,12 +37,6 @@ const CommandConfigs: CommandConfig[] = [
   {
     name: CommandName.remove,
     aliases: ['rm'],
-    expect: [TokenKind.Filter],
-    subcommands: [],
-  },
-  {
-    name: CommandName.list,
-    aliases: ['ls'],
     expect: [TokenKind.Filter],
     subcommands: [],
   },
@@ -66,143 +65,152 @@ const CommandConfigs: CommandConfig[] = [
     subcommands: [], // ...
   },
 ]
-// no reason it should change
 Object.freeze(CommandConfigs)
 
-export type CommandConfigList = {
+const DefaultCommand = CommandConfigs[0]
+
+type CommandConfigList = {
   [key: string]: CommandConfig
 }
 
-// {tags: [ ... ], groupName: [ ... ]}
-export type TagSet = {
+interface TagSet {
   [key: string]: string[]
 }
-
-export type FilterArgs = {
-    ids: number[]
-} & ModifierArgs
 
 export type ModifierArgs = {
   tags:  TagSet
   words: string[]
 }
 
-export type ParsedCommandArgs = {
-  filters: FilterArgs,
-  modifiers: ModifierArgs
+export type FilterArgs = {
+    ids: number[]
+} &  ModifierArgs
+
+interface HasCommand {
+  command: string
+} 
+
+interface HasArgs {
+  filters?: FilterArgs 
+  modifiers?: ModifierArgs 
 }
 
-export type Command = {
-  command: CommandName[]
-}
+export type ParsedCommand = HasCommand & HasArgs
+export type CommandArgs   = HasArgs
 
-export type ParsedCommand = Command & ParsedCommandArgs 
-
-type ParsingState = {
-  tokens: string[]
-  processedIndices: TokenKind[]
-  firstCommandIndex: number 
-}
-
-type ParserState = {
+interface ParserState  {
   parser: {
-    tokens: string[]
-    processedIndices: TokenKind[]
+    tokens:            string[]
+    tokenKind:         TokenKind[]
     firstCommandIndex: number 
-    expect: TokenKind[]
   }
 }
 
-type State = ParserState & ParsedCommand
+type ParserStateWithCommand = ParserState & ParsedCommand 
 
-function buildState(tokens: string[]): State {
+function buildParserState(tokens: string[]): ParserState {
   return {
     parser: {
-      tokens: tokens,
-      processedIndices: [],
+      tokens:            tokens,
+      tokenKind:         [],
       firstCommandIndex: -1,
-      expect: []
     },
-    command: [],
-    filters: {
-      ids:   [],
-      tags:  {},
-      words: [],
-    },
-    modifiers: {
-      tags:  {},
-      words: [],
-    },
-  } as State
+  } as ParserState
 }
 
-function extractCommand(state: State): ParsedCommand {
-  const { parser, ...rest} = state
+function extractCommand(state: ParserStateWithCommand): ParsedCommand {
+  const { parser, ...rest } = state
   return rest
 }
 
-
+// based on
 // https://taskwarrior.org/docs/syntax/
-// task <filter> <command> <modifications> <miscellaneous>
+//
+// task <filters> <commands> <modifications> 
 //
 // first, find the first thing that looks like a command
 // everything before it is a filter (ids, etc)
 // everything after it is a modification
-export function parse(tokens: string[]): ParsedCommand {
-  let state = buildState(tokens)
-      state = parseCommands(state) 
-  
-  // how we interpret remaining tokens depends on whether they're 
-  // before or after a command
-  
+const rxIds  = /^\d+(-\d+)?(,\d+(-\d+)?)*$/
+const rxUIDs = /^\:[a-zA-Z0-9]{4,10}$/
+const rxTags = /^([-+])(?:(?<g>[_a-zA-Z0-9]+):)?(?<t>[\.,_a-zA-Z0-9]+)*$/
+
+export function parse(tokens: string[]): ParsedCommand  {
+  let x = buildParserState(tokens)
+  let state = parseCommands(x) 
   const p = state.parser
 
-  p.tokens.forEach((word, i) => {
-    if(p.processedIndices[i] === undefined) {
-      // todo match IDs, tags, etc ... otherwise
-      // just treat as a word
-      if (i < p.firstCommandIndex || p.firstCommandIndex < 0) {
-        p.processedIndices[i] = TokenKind.Filter
-        state.filters.words.push(word)
-      } else {
-        p.processedIndices[i] = TokenKind.Modifier
-        state.modifiers.words.push(word)
-      }
+  tokens.forEach((token, i) => {
+    if(p.tokenKind[i] === undefined) {
+      const f = state.parser.firstCommandIndex
+      const t = (i < f || f === -1 ) ? TokenKind.Filter : TokenKind.Modifier
+      p.tokenKind[i] = t 
+        
+      match(token, rxIds, () => {
+        const x = recogniseIds(token)
+        console.log('matched IDs', x)
+      }) || match(token, rxUIDs, () => {
+        console.log('matched UIDs', token)
+      }) || match(token, rxTags, () => {
+        console.log('match tags', token)
+      }) || match(token, /./, () => { // default
+        state[t]?.words.push(token)      
+      })
     }
   })
   
   return extractCommand(state)
 }
 
-function parseCommands(state: State): State {
+function match(word: string, rx: RegExp, fn:(() => void)): boolean {
+  if(word.match(rx)) {
+    fn()
+    return true 
+  } else {
+    return false
+  }
+}
+
+// find the first command
+// and any valid contiguous subcommands
+// mark them in tokenKind
+// and store the [sub]command in state
+function parseCommands(state: ParserState): ParserStateWithCommand {
   let validCommands = CommandConfigs
+  let command: CommandConfig | null = null
   const p = state.parser
 
-  // find the command [and any subcommands]
   for (let i = 0; i < p.tokens.length; i++) {
-    const word = p.tokens[i]
-    const command: CommandConfig | null = recogniseCommand(word, validCommands)
-
-    if (command) {
-      p.processedIndices[i] = TokenKind.Command
-      state.command.push(command.name)
-      validCommands = command.subcommands
-      // there are no valid subcommands: we're done 
-      if (validCommands.length === 0) 
-        break
-    } else if(p.processedIndices.some( e => { 
-      e === TokenKind.Command 
-    })) 
-    // we've previously found a command, but matched no valid subcommand
-    break 
+    const c: CommandConfig | null = recogniseCommand(p.tokens[i], validCommands)
+    
+    if (c !== null) {
+      command = c
+      p.tokenKind[i] = TokenKind.Command
+      
+      if (command.subcommands?.length)
+        validCommands = command.subcommands
+      else
+        break              // we're done
+    } else {
+      if(command !== null) // command was previously found
+        break              // subcommands must be contiguous
+    }
   }
-
-  if (state.command.length === 0)  
-    state.command.push(CommandName.list) 
   
-  p.firstCommandIndex = p.processedIndices.indexOf(TokenKind.Command)
+  p.firstCommandIndex = p.tokenKind.indexOf(TokenKind.Command)
+  command = command || DefaultCommand
+  
+  let o = { command: command.name, parser: p }
+  let f = { filters: { ids: [], tags: {}, words: [] }}
+  let m = { modifiers: { tags: {}, words: [] }}
+  
+  if(command.expect.includes(TokenKind.Filter))
+    o = { ...o, ...f }
 
-  return state 
+  if(command.expect.includes(TokenKind.Modifier))
+    o = { ...o, ...m }
+
+  return o as ParserStateWithCommand
 }
 
 export function parseArgs(argv: string[]): ParsedCommand {
@@ -258,10 +266,6 @@ function recogniseIds(word: string): number[] | null {
   })
   return chunks.flat().filter((c) => typeof c === 'number') as number[]
 }
-
-// function recogniseTags()
-// function recognisePriority()
-// function recogniseParent()
 
 // utility functions
 

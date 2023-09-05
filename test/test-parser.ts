@@ -53,15 +53,15 @@ describe('parser', () => {
     test('add a note -> !add "a note"', (t) => {
       let input = 'add a note'.split(' ')
       let result = parse(input) as ParsedCommand
-      assert.deepEqual(result.command, ['add'])
-      assert.deepEqual(result.modifiers.words, ['a', 'note'])
+      assert.deepEqual(result.command, CommandName.add)
+      assert.deepEqual(result.modifiers!.words, ['a', 'note'])
     })
 
     test('default to list', (t) => {
       let input = 'what dis'.split(' ')
       let result = parse(input) as ParsedCommand
-      assert.deepEqual(result.command, [CommandName.list])
-      assert.deepEqual(result.filters.words, ['what', 'dis'])
+      assert.deepEqual(result.command, CommandName.list)
+      assert.deepEqual(result.filters!.words, ['what', 'dis'])
     })
 
     after(() => {

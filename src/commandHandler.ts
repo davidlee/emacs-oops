@@ -1,6 +1,6 @@
 import { uid } from './uid.js' 
 import { Entry } from './entities/Entry.js'
-import { FilterArgs, ModifierArgs, ParsedCommandArgs } from './parser.js'
+import { FilterArgs, ModifierArgs, ParsedCommand, CommandArgs} from './parser.js'
 import { EntryTypes, StatusNames } from './entities/Entry.js' 
 
 import eventChannel from './eventChannel.js'
@@ -24,8 +24,7 @@ export enum CommandName {
   undo    = 'undo',
 }
 
-type Args = ParsedCommandArgs
-
+type Args = CommandArgs
 
 export class CommandHandler {
   orm:  MikroORM
@@ -54,7 +53,7 @@ export class CommandHandler {
 
   @UseRequestContext()
   async add(args: Args): Promise<void> {
-    const text = args.modifiers.words.join(' ') 
+    const text =  args.modifiers!.words.join(' ') 
     const entry:  Entry = new Entry(text)
     const record: Entry = this.repo.create(entry) 
     
@@ -65,7 +64,7 @@ export class CommandHandler {
   @UseRequestContext()
   async list(args: Args) {
     console.log("== LIST ==")
-    const q = this.buildQueryFromFilters(args.filters)
+    const q = this.buildQueryFromFilters(args.filters!)
     const entries = await this.repo.find(q) 
     eventChannel.emit('entries', entries)
     this.entries = entries
@@ -102,7 +101,7 @@ export class CommandHandler {
 
   protected processArgs(args: Args) {
     const fs: object = {}
-    const ms = args.modifiers
+    const ms = args.modifiers!
     
     if(ms.words.length !== 0 ) { Object.assign(fs, {text: ms.words.join(' ')} ) }  
     return fs
