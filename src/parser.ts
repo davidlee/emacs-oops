@@ -1,6 +1,6 @@
 
 enum TokenKind {
-  Command  = 'commands',
+  Command  = 'command',
   Filter   = 'filters',
   Modifier = 'modifiers',
   Ids      = 'filters.ids',
@@ -12,7 +12,7 @@ export type CommandConfig = {
   name:          CommandName
   aliases:       string[]
   expect:        TokenKind[]
-  subcommands:   CommandConfig[]
+  subcommands:   CommandConfig[] 
   confirmation?: boolean 
 }
 
@@ -78,16 +78,18 @@ export type TagSet = {
   [key: string]: string[]
 }
 
+export type FilterArgs = {
+    ids: number[]
+} & ModifierArgs
+
+export type ModifierArgs = {
+  tags:  TagSet
+  words: string[]
+}
+
 export type ParsedCommandArgs = {
-  filters: {
-    ids:   number[]
-    tags:  TagSet
-    words: string[]
-  }
-  modifiers: {
-    tags:  TagSet
-    words: string[]
-  }
+  filters: FilterArgs,
+  modifiers: ModifierArgs
 }
 
 export type Command = {
@@ -102,14 +104,26 @@ type ParsingState = {
   firstCommandIndex: number 
 }
 
-type State = ParsingState & ParsedCommand
+type ParserState = {
+  parser: {
+    tokens: string[]
+    processedIndices: TokenKind[]
+    firstCommandIndex: number 
+    expect: TokenKind[]
+  }
+}
+
+type State = ParserState & ParsedCommand
 
 function buildState(tokens: string[]): State {
   return {
-    tokens: tokens,
+    parser: {
+      tokens: tokens,
+      processedIndices: [],
+      firstCommandIndex: -1,
+      expect: []
+    },
     command: [],
-    processedIndices: [],
-    firstCommandIndex: -1,
     filters: {
       ids:   [],
       tags:  {},
@@ -122,11 +136,9 @@ function buildState(tokens: string[]): State {
   } as State
 }
 
-// remove data only needed for tracking parser state, 
-// leaving a command, any subcommands, and filters + modifiers
 function extractCommand(state: State): ParsedCommand {
-  const { tokens, processedIndices, ...parsed } = state
-  return parsed
+  const { parser, ...rest} = state
+  return rest
 }
 
 
@@ -143,46 +155,52 @@ export function parse(tokens: string[]): ParsedCommand {
   // how we interpret remaining tokens depends on whether they're 
   // before or after a command
   
-  state.tokens.forEach((word, i) => {
-    if(state.processedIndices[i] === undefined) {
+  const p = state.parser
+
+  p.tokens.forEach((word, i) => {
+    if(p.processedIndices[i] === undefined) {
       // todo match IDs, tags, etc ... otherwise
       // just treat as a word
-      if (i < state.firstCommandIndex || state.firstCommandIndex < 0) {
-        state.processedIndices[i] = TokenKind.Filter
+      if (i < p.firstCommandIndex || p.firstCommandIndex < 0) {
+        p.processedIndices[i] = TokenKind.Filter
         state.filters.words.push(word)
       } else {
-        state.processedIndices[i] = TokenKind.Modifier
+        p.processedIndices[i] = TokenKind.Modifier
         state.modifiers.words.push(word)
       }
     }
   })
+  
   return extractCommand(state)
 }
 
 function parseCommands(state: State): State {
   let validCommands = CommandConfigs
+  const p = state.parser
 
   // find the command [and any subcommands]
-  for (let i = 0; i < state.tokens.length; i++) {
-    const word = state.tokens[i]
+  for (let i = 0; i < p.tokens.length; i++) {
+    const word = p.tokens[i]
     const command: CommandConfig | null = recogniseCommand(word, validCommands)
 
     if (command) {
-      state.processedIndices[i] = TokenKind.Command
+      p.processedIndices[i] = TokenKind.Command
       state.command.push(command.name)
       validCommands = command.subcommands
       // there are no valid subcommands: we're done 
       if (validCommands.length === 0) 
         break
-    } else if(state.processedIndices.some( e => {e === TokenKind.Command})) 
-      // we've previously found a command, but matched no valid subcommand
-        break 
+    } else if(p.processedIndices.some( e => { 
+      e === TokenKind.Command 
+    })) 
+    // we've previously found a command, but matched no valid subcommand
+    break 
   }
 
   if (state.command.length === 0)  
     state.command.push(CommandName.list) 
   
-  state.firstCommandIndex = state.processedIndices.indexOf(TokenKind.Command)
+  p.firstCommandIndex = p.processedIndices.indexOf(TokenKind.Command)
 
   return state 
 }

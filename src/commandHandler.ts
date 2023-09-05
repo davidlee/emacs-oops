@@ -1,6 +1,6 @@
 import { uid } from './uid.js' 
 import { Entry } from './entities/Entry.js'
-import { ParsedCommandArgs } from './parser.js'
+import { FilterArgs, ModifierArgs, ParsedCommandArgs } from './parser.js'
 import { EntryTypes, StatusNames } from './entities/Entry.js' 
 
 import eventChannel from './eventChannel.js'
@@ -55,17 +55,8 @@ export class CommandHandler {
   @UseRequestContext()
   async add(args: Args): Promise<void> {
     const text = args.modifiers.words.join(' ') 
-    const entry: Entry = new Entry(text)
-    const record: Entry = this.repo.create(entry)
-    // {
-    //   text:    text,
-    //   urgency: 1.0,
-    //   type:    EntryTypes.Transient,
-    //   status:  StatusNames.Capture,
-    //   created: new Date(),
-    //   meta:    new JsonType(),
-    //   uid:     uid(),
-    // }
+    const entry:  Entry = new Entry(text)
+    const record: Entry = this.repo.create(entry) 
     
     await this.em.persistAndFlush(record)
     eventChannel.emit('created', { status: 'OK', id: record.id, record: record})
@@ -74,15 +65,7 @@ export class CommandHandler {
   @UseRequestContext()
   async list(args: Args) {
     console.log("== LIST ==")
-    const f = args.filters
-    let q = {}
-    
-    if(f.words.length > 1) {
-      const x = { words: {$like: `%${f.words.join(' ')}%` }}
-      q = { ...q, ...x }
-    }
-    // TODO
-    
+    const q = this.buildQueryFromFilters(args.filters)
     const entries = await this.repo.find(q) 
     eventChannel.emit('entries', entries)
     this.entries = entries
@@ -90,18 +73,6 @@ export class CommandHandler {
 
   async modify(args: Args) {
     console.log('modify', args)
-    const f = args.filters
-    const m = args.modifiers
-    let q = {}
-    let a = {}
-
-    if(f.ids.length > 0) {
-      const x = {ids: f.ids }
-      q = { ...q, ...x}
-    }
-    // TODO
-    
-    ////
     
   }
 
@@ -136,6 +107,37 @@ export class CommandHandler {
     if(ms.words.length !== 0 ) { Object.assign(fs, {text: ms.words.join(' ')} ) }  
     return fs
   }
+
+  protected applyFilters(){
+    
+  }
+
+  protected applyModifiers(){
+    
+  }
+
+  protected buildQueryFromFilters(f: FilterArgs, q = {}) {
+    
+    if(f.ids.length > 0) {
+      const x = {ids: f.ids }
+      q = { ...q, ...{ ids: f.ids }}
+    }
+    
+    if(f.words.length > 1) {
+      q = { ...q, ...{ words: {$like: `%${f.words.join(' ')}%` }} }
+    }
+    
+    return q
+  }
+
+  protected applyModifiersToInstance(args: ModifierArgs, e: Entry) {
+    //
+    return e
+  } 
   
+  protected applyModifiersToCollection(args: Args, es: Iterable<Entry>): Iterable<Entry> {
+    //
+    return es
+  }
 }
 
