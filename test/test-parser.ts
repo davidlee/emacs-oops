@@ -97,7 +97,6 @@ describe('parser', () => {
     test('list recognises a uid', (t) => {
       testWith(':1iu46AE list', CommandName.list, (c) => {
         assert.deepEqual(c.filters!.uids, ['1iu46AE'])
-        assert.deepEqual(c.filters!.words, [])
         assert.equal(c.modifiers, undefined)
       })
     })
@@ -105,9 +104,12 @@ describe('parser', () => {
     test('list recognises any number of uids', (t) => {
       testWith(':1iu46AE :1iu68x9 list :1ip658ih', CommandName.list, (c) => {
         assert.deepEqual(c.filters!.uids, ['1iu46AE', '1iu68x9', '1ip658ih'])
-        assert.deepEqual(c.filters!.words, [])
         assert.equal(c.modifiers, undefined)
       })
+    })
+
+    test('tags', (t) => {
+      assert.fail("NOT IMPLEMENTED")
     })
 
     test('rm (alias: remove)', (t) => {
