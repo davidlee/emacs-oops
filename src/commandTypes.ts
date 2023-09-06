@@ -23,6 +23,7 @@ export type CommandConfig = {
   expect:       TokenKind[]
   subcommands?: CommandConfig[] 
 }
+
 // strictly speaking this is a value, but ...
 export const CommandConfigs: CommandConfig[] = [
   {
@@ -80,4 +81,3 @@ export const CommandConfigs: CommandConfig[] = [
   },
 ]
 Object.freeze(CommandConfigs)
-type Args = CommandArgs

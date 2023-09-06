@@ -1,6 +1,5 @@
 import { Entry} from './entities/Entry.js'
 import { FilterArgs, ModifierArgs, CommandArgs} from './parser.js'
-// import { CommandName, CommandConfig, TokenKind, CommandConfigs } from './commandTypes.js'
 
 import eventChannel from './eventChannel.js'
 
