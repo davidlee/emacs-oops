@@ -120,11 +120,12 @@ describe('parser', () => {
       })
     })
 
-    test('tags with tag group', (t) => {
-      testWith('add +grp:tag,other.tag', CommandName.add, (c) => {
-        assert.deepEqual(c.modifiers!.tags, {grp: ['tag', 'other.tag']}) 
+    test('tags separated by spaces', (t) => {
+      testWith('add +grp:tag,other.tag +cool +grp:another', CommandName.add, (c) => {
+        assert.deepEqual(c.modifiers!.tags, {grp: ['tag', 'other.tag', 'another'], tags: ['cool']}) 
       })
     })
+    
     test('rm (alias: remove)', (t) => {
       testWith('rm', CommandName.remove, (c) => {
         assert.deepEqual(c.filters!.ids, [])

@@ -1,80 +1,12 @@
+import { CommandConfig, CommandConfigs } from './commandHandler.js'
 
-enum TokenKind {
+import deepmerge from 'deepmerge'
+
+export enum TokenKind {
   Command  = 'command',
   Filter   = 'filters',
   Modifier = 'modifiers',
   Ids      = 'filters.ids',
-}
-
-import { CommandName } from './commandHandler.js'
-
-export type CommandConfig = {
-  name:         CommandName
-  aliases:      string[]
-  expect:       TokenKind[]
-  subcommands?: CommandConfig[] 
-}
-
-const CommandConfigs: CommandConfig[] = [
-  {
-    name: CommandName.list,
-    aliases: ['ls'],
-    expect: [TokenKind.Filter],
-    subcommands: [],
-  },
-  {
-    name: CommandName.add,
-    aliases: [],
-    expect: [TokenKind.Modifier],
-    subcommands: [],
-  },
-  {
-    name: CommandName.modify,
-    aliases: [],
-    expect: [TokenKind.Filter, TokenKind.Modifier],
-    subcommands: [],
-  },
-  {
-    name: CommandName.remove,
-    aliases: ['rm'],
-    expect: [TokenKind.Filter],
-    subcommands: [],
-  },
-  {
-    name: CommandName.context,
-    aliases: ['@'],
-    expect: [TokenKind.Modifier],
-    subcommands: [],
-  },
-  {
-    name: CommandName.done,
-    aliases: ['x'],
-    expect: [TokenKind.Filter],
-    subcommands: [],
-  },
-  {
-    name: CommandName.undo,
-    aliases: [],
-    expect: [TokenKind.Filter],
-    subcommands: [],
-  },
-  {
-    name: CommandName.config,
-    aliases: ['cfg'],
-    expect: [TokenKind.Modifier],
-    subcommands: [], // ...
-  },
-]
-Object.freeze(CommandConfigs)
-
-const DefaultCommand = CommandConfigs[0]
-
-type CommandConfigList = {
-  [key: string]: CommandConfig
-}
-
-interface TagSet {
-  [key: string]: string[]
 }
 
 export type ModifierArgs = {
@@ -87,6 +19,19 @@ export type FilterArgs = {
     uids: string[]
 } &  ModifierArgs
 
+export type ParsedCommand = HasCommand & HasArgs
+export type CommandArgs   = HasArgs
+
+const DefaultCommand = CommandConfigs[0]
+
+type CommandConfigList = {
+  [key: string]: CommandConfig
+}
+
+interface TagSet {
+  [key: string]: string[]
+}
+
 interface HasCommand {
   command: string
 } 
@@ -95,9 +40,6 @@ interface HasArgs {
   filters?: FilterArgs 
   modifiers?: ModifierArgs 
 }
-
-export type ParsedCommand = HasCommand & HasArgs
-export type CommandArgs   = HasArgs
 
 interface ParserState  {
   parser: {
@@ -156,7 +98,7 @@ export function parse(tokens: string[]): ParsedCommand  {
       }) || match(token, rxTags, () => {
         const tags = recogniseTags(token)
         if(tags) {
-          state[t]!.tags = tags
+          state[t]!.tags = deepmerge(state[t]!.tags, tags)
           return true 
         } else return false
       }) || match(token, /./, () => { // default
@@ -258,10 +200,10 @@ function recogniseTags(token: string): TagSet | null {
   if(md){
     let g, o: TagSet = {}
     if (!(g = md.groups?.g)) { g = defaultTagGroupName }
-    o[g] = md.groups!.t.split(',')
+    if (o[g] === undefined) o[g] = []
+    o[g] = [ ...o[g], ...md.groups!.t.split(',')]
     return o
-  }
-  return null
+  } else return null
 } 
 
 type IntRange = [number, number]

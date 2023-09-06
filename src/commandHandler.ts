@@ -1,7 +1,5 @@
-import { uid } from './uid.js' 
-import { Entry } from './entities/Entry.js'
-import { FilterArgs, ModifierArgs, ParsedCommand, CommandArgs} from './parser.js'
-import { EntryTypes, StatusNames } from './entities/Entry.js' 
+import { Entry} from './entities/Entry.js'
+import { FilterArgs, ModifierArgs, TokenKind, CommandArgs} from './parser.js'
 
 import eventChannel from './eventChannel.js'
 
@@ -9,7 +7,6 @@ import {
   EntityManager,
   EntityRepository,
   MikroORM,
-  JsonType,
   UseRequestContext,
 } from '@mikro-orm/core'
 
@@ -17,12 +14,78 @@ export enum CommandName {
   add     = 'add',
   modify  = 'modify',
   list    = 'list',
+  remove  = 'remove',
+  append  = 'append',
   context = 'context',
   done    = 'done',
   config  = 'config',
-  remove  = 'remove',
   undo    = 'undo',
 }
+
+export type CommandConfig = {
+  name:         CommandName
+  aliases:      string[]
+  expect:       TokenKind[]
+  subcommands?: CommandConfig[] 
+}
+
+export const CommandConfigs: CommandConfig[] = [
+  {
+    name: CommandName.list,
+    aliases: ['ls'],
+    expect: [TokenKind.Filter],
+    subcommands: [],
+  },
+  {
+    name: CommandName.add,
+    aliases: [],
+    expect: [TokenKind.Modifier],
+    subcommands: [],
+  },
+  {
+    name: CommandName.modify,
+    aliases: [],
+    expect: [TokenKind.Filter, TokenKind.Modifier],
+    subcommands: [],
+  },
+  {
+    name: CommandName.remove,
+    aliases: ['rm'],
+    expect: [TokenKind.Filter],
+    subcommands: [],
+  },
+  {
+    name: CommandName.append,
+    aliases: [],
+    expect: [TokenKind.Filter, TokenKind.Modifier],
+    subcommands: [],
+  },
+  {
+    name: CommandName.context,
+    aliases: ['@'],
+    expect: [TokenKind.Modifier],
+    subcommands: [],
+  },
+  {
+    name: CommandName.done,
+    aliases: ['x'],
+    expect: [TokenKind.Filter],
+    subcommands: [],
+  },
+  {
+    name: CommandName.undo,
+    aliases: [],
+    expect: [TokenKind.Filter],
+    subcommands: [],
+  },
+  {
+    name: CommandName.config,
+    aliases: ['cfg'],
+    expect: [TokenKind.Modifier],
+    subcommands: [], // ...
+  },
+]
+Object.freeze(CommandConfigs)
 
 type Args = CommandArgs
 
