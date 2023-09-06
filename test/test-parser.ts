@@ -2,7 +2,7 @@ import { parse, ParsedCommand } from '../src/parser.js'
 import { CommandName } from '../src/commandHandler.js'
 
 import assert from 'node:assert/strict'
-import { before, after, describe, test } from 'node:test'
+import { describe, test } from 'node:test'
 
 describe('parser', () => {
 

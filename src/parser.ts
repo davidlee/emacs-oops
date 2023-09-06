@@ -1,13 +1,7 @@
-import { CommandConfig, CommandConfigs } from './commandHandler.js'
+import { CommandConfig, CommandConfigs, TokenKind } from './commandHandler.js'
 
 import deepmerge from 'deepmerge'
 
-export enum TokenKind {
-  Command  = 'command',
-  Filter   = 'filters',
-  Modifier = 'modifiers',
-  Ids      = 'filters.ids',
-}
 
 export type ModifierArgs = {
   tags:  TagSet

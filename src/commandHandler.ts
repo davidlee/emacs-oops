@@ -1,5 +1,5 @@
 import { Entry} from './entities/Entry.js'
-import { FilterArgs, ModifierArgs, TokenKind, CommandArgs} from './parser.js'
+import { FilterArgs, ModifierArgs, CommandArgs} from './parser.js'
 
 import eventChannel from './eventChannel.js'
 
@@ -20,6 +20,13 @@ export enum CommandName {
   done    = 'done',
   config  = 'config',
   undo    = 'undo',
+}
+
+export enum TokenKind {
+  Command  = 'command',
+  Filter   = 'filters',
+  Modifier = 'modifiers',
+  Ids      = 'filters.ids',
 }
 
 export type CommandConfig = {
