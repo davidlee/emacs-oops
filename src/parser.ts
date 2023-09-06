@@ -110,9 +110,16 @@ interface ParserState  {
 type ParserStateWithCommand = ParserState & ParsedCommand 
 
 //
-// Functions
+// Exported Functions
 //
-//
+
+export function argsFromArgv(argv: string[]): string[] {
+  return argv.slice(2)
+}
+
+export function parseArgs(argv: string[]): ParsedCommand {
+  return parse(argsFromArgv(argv))
+}
 
 // based on
 // https://taskwarrior.org/docs/syntax/
@@ -124,7 +131,7 @@ type ParserStateWithCommand = ParserState & ParsedCommand
 // everything after it is a modification
 const rxIds  = /^\d+(\-\d+)?(,\d+(\-\d+)?)*$/g
 const rxUIDs = /^\:[a-zA-Z0-9]{4,10}$/g
-const rxTags = /^([-+])(?:(?<g>[_a-zA-Z0-9]+):)?(?<t>[\.,_a-zA-Z0-9]+)*$/g
+const rxTags = /^([-+])(?:(?<g>[_a-zA-Z0-9]+):)?(?<t>[\.,_a-zA-Z0-9]+)*$/
 
 export function parse(tokens: string[]): ParsedCommand  {
   let x = buildParserState(tokens)
@@ -147,17 +154,25 @@ export function parse(tokens: string[]): ParsedCommand  {
       }) || match(token, rxUIDs, () => {
           return !!state.filters!.uids.push(token.slice(1,10))
       }) || match(token, rxTags, () => {
-  // TODO
-        return false
+        const tags = recogniseTags(token)
+        if(tags) {
+          state[t]!.tags = tags
+          return true 
+        } else return false
       }) || match(token, /./, () => { // default
         state[t]?.words.push(token)      
           return true
       })
     }
   })
-  
-  return extractCommand(state)
+  const { parser, ...parsedCommand } = state
+  return parsedCommand
 }
+export default parse
+
+//
+// Helper Functions
+//
 
 function match(word: string, rx: RegExp, fn:(() => boolean)): boolean {
   if(word.match(rx)) {
@@ -167,36 +182,43 @@ function match(word: string, rx: RegExp, fn:(() => boolean)): boolean {
   }
 }
 
+function buildParserState(tokens: string[]): ParserState {
+  return {
+    parser: {
+      tokens:            tokens,
+      tokenKind:         [],
+      firstCommandIndex: -1,
+    },
+  } as ParserState
+}
+
 // find the first command
 // and any valid contiguous subcommands
 // mark them in tokenKind
 // and store the [sub]command in state
 function parseCommands(state: ParserState): ParserStateWithCommand {
-  let validCommands = CommandConfigs
+  const p                           = state.parser
+  let validCommands                 = CommandConfigs
   let command: CommandConfig | null = null
-  const p = state.parser
 
   for (let i = 0; i < p.tokens.length; i++) {
-    const c: CommandConfig | null = recogniseCommand(p.tokens[i], validCommands)
-    
-    if (c !== null) {
-      command = c
+    if (command = recogniseCommand(p.tokens[i], validCommands)) {
       p.tokenKind[i] = TokenKind.Command
-      
-      if (command.subcommands?.length)
+      if (command.subcommands?.length) {
         validCommands = command.subcommands
-      else
-        break              // we're done
+      } else break          // we're done
     } else {
-      if(command !== null) // command was previously found
-        break              // subcommands must be contiguous
+      if(p.tokenKind.some((t) => { t === TokenKind.Command})) 
+        break // subcommands must be contiguous, streak broken
     }
   }
-  
-  p.firstCommandIndex = p.tokenKind.indexOf(TokenKind.Command)
   command = command || DefaultCommand
-  
-  let o = { command: command.name, parser: p }
+  p.firstCommandIndex = p.tokenKind.indexOf(TokenKind.Command)
+  return appendCommandToState(command, state)
+}
+
+function appendCommandToState(command: CommandConfig, state: ParserState): ParserStateWithCommand {
+  let o = { command: command.name, parser: state.parser }
   let f = { filters: { ids: [], uids: [], tags: {}, words: [] }}
   let m = { modifiers: { tags: {}, words: [] }}
   
@@ -206,11 +228,7 @@ function parseCommands(state: ParserState): ParserStateWithCommand {
   if(command.expect.includes(TokenKind.Modifier))
     o = { ...o, ...m }
 
-  return o as ParserStateWithCommand
-}
-
-export function parseArgs(argv: string[]): ParsedCommand {
-  return parse(argsFromArgv(argv))
+  return o 
 }
 
 function commandAliases(cmds: CommandConfig[]=CommandConfigs): CommandConfigList {
@@ -218,9 +236,6 @@ function commandAliases(cmds: CommandConfig[]=CommandConfigs): CommandConfigList
   cmds.map((c) => c.aliases.forEach((alias) => { o[alias] = c }))
   return o
 }
-//
-// matchers
-//
 
 function recogniseCommand(word: string, candidates=CommandConfigs): CommandConfig | null {
   // check for exact matches of any aliases
@@ -236,6 +251,18 @@ function recogniseCommand(word: string, candidates=CommandConfigs): CommandConfi
     return matches[0]
   else return null
 }
+
+const defaultTagGroupName = 'tags'
+function recogniseTags(token: string): TagSet | null {
+  const md = token.match(rxTags)
+  if(md){
+    let g, o: TagSet = {}
+    if (!(g = md.groups?.g)) { g = defaultTagGroupName }
+    o[g] = md.groups!.t.split(',')
+    return o
+  }
+  return null
+} 
 
 type IntRange = [number, number]
 // [3,5] -> [3,4,5]
@@ -258,24 +285,5 @@ function recogniseIds(word: string): number[] | null {
     } else return null
   })
   return chunks.flat().filter((c) => typeof c === 'number') as number[]
-}
-
-export function argsFromArgv(argv: string[]): string[] {
-  return argv.slice(2)
-}
-
-function buildParserState(tokens: string[]): ParserState {
-  return {
-    parser: {
-      tokens:            tokens,
-      tokenKind:         [],
-      firstCommandIndex: -1,
-    },
-  } as ParserState
-}
-
-function extractCommand(state: ParserStateWithCommand): ParsedCommand {
-  const { parser, ...rest } = state
-  return rest
 }
 

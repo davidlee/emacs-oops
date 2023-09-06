@@ -108,10 +108,23 @@ describe('parser', () => {
       })
     })
 
-    test('tags', (t) => {
-      assert.fail("NOT IMPLEMENTED")
+    test('a tag', (t) => {
+      testWith('add +tag', CommandName.add, (c) => {
+        assert.deepEqual(c.modifiers!.tags, {tags: ['tag']})
+      })
     })
 
+    test('tags', (t) => {
+      testWith('add +tag,other.tag', CommandName.add, (c) => {
+        assert.deepEqual(c.modifiers!.tags, {tags: ['tag', 'other.tag']})
+      })
+    })
+
+    test('tags with tag group', (t) => {
+      testWith('add +grp:tag,other.tag', CommandName.add, (c) => {
+        assert.deepEqual(c.modifiers!.tags, {grp: ['tag', 'other.tag']}) 
+      })
+    })
     test('rm (alias: remove)', (t) => {
       testWith('rm', CommandName.remove, (c) => {
         assert.deepEqual(c.filters!.ids, [])
