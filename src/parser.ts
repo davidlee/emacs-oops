@@ -1,9 +1,7 @@
-
-import { TokenKind, CommandConfig} from './commandTypes.js'
-import { CommandConfigs} from './commandHandler.js'
+import { CommandConfigs, TokenKind, CommandConfig} from './commandTypes.js'
+import { } from './commandHandler.js'
 
 import deepmerge from 'deepmerge'
-
 
 export type ModifierArgs = {
   tags:  TagSet
