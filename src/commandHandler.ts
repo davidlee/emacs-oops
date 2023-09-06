@@ -1,5 +1,6 @@
 import { Entry} from './entities/Entry.js'
 import { FilterArgs, ModifierArgs, CommandArgs} from './parser.js'
+import { CommandName, CommandConfig, TokenKind } from './commandTypes.js'
 
 import eventChannel from './eventChannel.js'
 
@@ -10,31 +11,6 @@ import {
   UseRequestContext,
 } from '@mikro-orm/core'
 
-export enum CommandName {
-  add     = 'add',
-  modify  = 'modify',
-  list    = 'list',
-  remove  = 'remove',
-  append  = 'append',
-  context = 'context',
-  done    = 'done',
-  config  = 'config',
-  undo    = 'undo',
-}
-
-export enum TokenKind {
-  Command  = 'command',
-  Filter   = 'filters',
-  Modifier = 'modifiers',
-  Ids      = 'filters.ids',
-}
-
-export type CommandConfig = {
-  name:         CommandName
-  aliases:      string[]
-  expect:       TokenKind[]
-  subcommands?: CommandConfig[] 
-}
 
 export const CommandConfigs: CommandConfig[] = [
   {

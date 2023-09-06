@@ -1,4 +1,6 @@
-import { CommandConfig, CommandConfigs, TokenKind } from './commandHandler.js'
+
+import { TokenKind, CommandConfig} from './commandTypes.js'
+import { CommandConfigs} from './commandHandler.js'
 
 import deepmerge from 'deepmerge'
 
