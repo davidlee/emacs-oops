@@ -11,8 +11,8 @@
   "scripts": {
     "test": "pnpm exec node --loader tsx --test-reporter spec --no-warnings --test test/*.ts",
     "watch": "pnpm exec node --watch --loader tsx --test-reporter spec --no-warnings --test test/*.ts",
-    "start": "pnpm run build && node --loader tsx build/index.js",
-    "build": "rm -fr ./build && pnpm exec tsc",
+    "start": "pnpm run build && node --loader tsx dist/index.js",
+    "build": "rm -fr ./dist && pnpm exec tsc",
     "lint": "pnpm exec eslint . --ext .ts",
     "lint:fix": "pnpm exec eslint . --fix --ext .ts",
     "prettier": "pnpm exec prettier --config .prettierrc -w 'src/**/*.ts' 'test/**/*.ts'",

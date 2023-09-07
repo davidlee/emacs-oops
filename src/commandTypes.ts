@@ -56,6 +56,7 @@ export const CommandConfigs: CommandConfig[] = [
     expect: [TokenKind.Filter, TokenKind.Modifier],
     subcommands: [],
   },
+  {
     name: CommandName.context,
     aliases: ['@'],
     expect: [TokenKind.Modifier],

@@ -6,7 +6,7 @@ import { SqlHighlighter } from '@mikro-orm/sql-highlighter';
 import { Migrator } from '@mikro-orm/migrations';
 
 export const config: Options = {
-  entities:   ['./build/entities'],
+  entities:   ['./dist/entities'],
   entitiesTs: ['./src/entities'],
   // metadataProvider: TsMorphMetadataProvider,
   driver:          BetterSqliteDriver,
