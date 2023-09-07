@@ -1,24 +1,60 @@
+#!/usr/bin/env node
+
 import { orm, close } from './db.js'
-import { parseArgs } from './parser.js'
+import { parse } from './parser.js'
 import { dispatch } from './dispatcher.js'
 import { CommandHandler } from "./commandHandler.js"
+// can we conditionally import these? 
 import Screen from './main.js'
 import { render } from 'ink'
 
+import { parseArgs, ParseArgsConfig } from 'node:util'
 
-// we want this guy listening
-new CommandHandler(orm)
+const _handler = new CommandHandler(orm); _handler // listen ...
 
-async function main() {
-  const command = parseArgs(process.argv)
-  
-  dispatch(command).then((result) => {
-    console.log('command success')
-  }).catch((reason) => {
-      console.log('index bad', reason)})
-  
- // close()
+const options: ParseArgsConfig = {
+  options: {
+    'benchmark-init': {
+      type: 'boolean',
+      short: 'b',
+    },
+    'interactive': {
+      type: 'boolean',
+      short: 'i',
+    }
+  },
+  tokens: true,
+  strict: false, // allow -tagnames, etc
+  allowPositionals: true,
 }
 
-render(Screen({log: 'spinner'}))
-main()
+const { values, positionals, tokens } = parseArgs(options)
+  
+const command = parse(positionals)
+
+if(values.interactive === true) {
+  interactive()
+} else {
+  cli()
+}
+
+
+async function cli() {
+  dispatch(command).then((_result) => {
+    close()
+  }).catch((reason) => {
+    console.log('error:', reason)
+    close()
+  })
+}
+
+async function interactive() {
+  render(Screen({log: '!!!'}))
+  dispatch(command).then((_result) => {
+    // close()
+  }).catch((reason) => {
+    console.log('error:', reason)
+    close()
+  })
+}
+

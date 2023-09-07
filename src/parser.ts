@@ -1,5 +1,6 @@
 import { CommandConfigs, TokenKind, CommandConfig} from './commandTypes.js'
 import { } from './commandHandler.js'
+import { Tag } from './entities/Tag.js'
 
 import deepmerge from 'deepmerge'
 
@@ -23,7 +24,8 @@ type CommandConfigList = {
 }
 
 interface TagSet {
-  [key: string]: string[]
+  yes?: { [key: string]: string[] }
+  no?:  { [key: string]: string[] }
 }
 
 interface HasCommand {
@@ -188,15 +190,15 @@ function recogniseCommand(word: string, candidates=CommandConfigs): CommandConfi
   else return null
 }
 
-const defaultTagGroupName = 'tags'
+const defaultTagGroupName = Tag.defaultGroup
 function recogniseTags(token: string): TagSet | null {
   const md = token.match(rxTags)
   if(md){
-    let g, o: TagSet = {}
+    let g, o: { [key: string]: string[] } = {}
     if (!(g = md.groups?.g)) { g = defaultTagGroupName }
-    if (o[g] === undefined) o[g] = []
-    o[g] = [ ...o[g], ...md.groups!.t.split(',')]
-    return o
+    o[g] = md.groups!.t.split(',')
+    const kind = token[0] === '+' ? 'yes' : 'no'
+    return { [kind]: o } as TagSet
   } else return null
 } 
 

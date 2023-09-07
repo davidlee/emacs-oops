@@ -1,6 +1,6 @@
 import { Entry} from './entities/Entry.js'
 import { FilterArgs, ModifierArgs, CommandArgs} from './parser.js'
-
+import { Tag } from './entities/Tag.js'
 import eventChannel from './eventChannel.js'
 
 import { 
@@ -36,49 +36,68 @@ export class CommandHandler {
      this.modify(args)
     })
   }
-
+ 
+  // add 
   @UseRequestContext()
   async add(args: Args): Promise<void> {
-    const text =  args.modifiers!.words.join(' ') 
+    const m = args.modifiers!
+    const newTags = m.tags?.yes
+    const text    = m.words.join(' ') 
     const entry:  Entry = new Entry(text)
-    const record: Entry = this.repo.create(entry) 
     
+    console.log(newTags)
+    
+    if(newTags && Object.keys(newTags).length) {
+      for(const [group, tags] of Object.entries(newTags)) {
+        console.log('tags', tags)
+        console.log('group',group)
+        // console.log('REF', entry)
+        
+        for(const tag of tags) {
+          const t = new Tag(tag, group)
+          entry.tags.add(t)
+        }
+      }
+    }
+
+    const record: Entry = this.repo.create(entry) 
     await this.em.persistAndFlush(record)
     eventChannel.emit('created', { status: 'OK', id: record.id, record: record})
   }
 
+  // list
   @UseRequestContext()
   async list(args: Args) {
-    console.log("== LIST ==")
+    // console.log("== LIST ==")
     const q = this.buildQueryFromFilters(args.filters!)
     const entries = await this.repo.find(q) 
-    eventChannel.emit('entries', entries)
+    // TODO we probably want to return a response object
+    eventChannel.emit('entries', entries, { populate: ['tags'] })
     this.entries = entries
   }
 
+  // modify
   async modify(args: Args) {
     console.log('modify', args)
+    const q = this.buildQueryFromFilters(args.filters!)
+    const entries = await this.repo.find(q)
+
+    switch(entries.length) {
+      case 0:
+        eventChannel.emit( 'error', { status: 'NOT_FOUND', message: 'No entries found' })
+        break
+      case 1: 
+        const entry = this.applyModifiersToInstance(args.modifiers!, entries[0])
+        break
+      default:
+        // send a command in progress
+    }
+
+    // FIRST: apply filters, find how many records will be affected
+    // if only one, then apply modifiers to that record
+    // if multiple, instead send a command in progress object
+    // with the entries to be affected and confirmation message attached
     
-  }
-
-  remove(args: Args) {
-    args
-  }
-  
-  context(args: Args) {
-    args
-  }
-
-  done(args: Args) {
-    args    
-   }
-
-  config(args: Args) {
-    args    
-  }
-
-  undo(args: Args) {
-    args    
   }
 
   async exit(ms:number = 250){
@@ -93,14 +112,6 @@ export class CommandHandler {
     return fs
   }
 
-  protected applyFilters(){
-    
-  }
-
-  protected applyModifiers(){
-    
-  }
-
   protected buildQueryFromFilters(f: FilterArgs, q = {}) {
     
     if(f.ids.length > 0) {
@@ -109,7 +120,7 @@ export class CommandHandler {
     }
     
     if(f.words.length > 1) {
-      q = { ...q, ...{ words: {$like: `%${f.words.join(' ')}%` }} }
+      q = { ...q, ...{ text: {$like: `%${f.words.join(' ')}%` }} }
     }
     
     return q

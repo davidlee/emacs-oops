@@ -1,5 +1,5 @@
 import { parse, ParsedCommand } from '../src/parser.js'
-import { CommandName } from '../src/commandHandler.js'
+import { CommandName } from '../src/commandTypes.js'
 
 import assert from 'node:assert/strict'
 import { describe, test } from 'node:test'
@@ -110,19 +110,19 @@ describe('parser', () => {
 
     test('a tag', (t) => {
       testWith('add +tag', CommandName.add, (c) => {
-        assert.deepEqual(c.modifiers!.tags, {tags: ['tag']})
+        assert.deepEqual(c.modifiers!.tags, { yes: { default: ['tag'] }})
       })
     })
 
     test('tags', (t) => {
       testWith('add +tag,other.tag', CommandName.add, (c) => {
-        assert.deepEqual(c.modifiers!.tags, {tags: ['tag', 'other.tag']})
+        assert.deepEqual(c.modifiers!.tags, { yes: { default: ['tag', 'other.tag'] }})
       })
     })
 
     test('tags separated by spaces', (t) => {
-      testWith('add +grp:tag,other.tag +cool +grp:another', CommandName.add, (c) => {
-        assert.deepEqual(c.modifiers!.tags, {grp: ['tag', 'other.tag', 'another'], tags: ['cool']}) 
+      testWith('add +grp:tag,other.tag -cool +grp:another +right', CommandName.add, (c) => {
+        assert.deepEqual(c.modifiers!.tags, { yes: { grp: ['tag', 'other.tag', 'another'], default: ['right'] }, no: { default: ['cool']}}) 
       })
     })
     

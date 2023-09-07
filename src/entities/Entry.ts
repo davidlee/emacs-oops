@@ -57,7 +57,7 @@ export class  Entry extends CustomBaseEntity {
   text:       string
   uri?:       string
 
-  tags?:      Collection<Tag>
+  tags:       Collection<Tag>
   meta:       JsonType
 
   // depends?:  Ref<Entry>[]
@@ -107,7 +107,7 @@ export const EntrySchema = new EntitySchema<Entry, CustomBaseEntity>({
     meta:      { type: JsonType },
 
     parent:    { reference: '1:m', entity: () => 'Entry' },
-    tags:      { entity: () => 'Tag', inversedBy: 'entries' },
+    tags:      { reference: 'm:n', entity: () => 'Tag', inversedBy: 'entries', owner: true  },
 
     // updates:
     // reviews:

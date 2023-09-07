@@ -5,6 +5,7 @@ import {
   EntitySchema,
   Collection,
   JsonType,
+  ReferenceType,
 } from "@mikro-orm/core"
 
 export class Tag extends CustomBaseEntity {
@@ -20,6 +21,7 @@ export class Tag extends CustomBaseEntity {
     this.name = name
     this.group = group
     this.coefficient = 1.0
+    this.entries = new Collection<Entry>(this)
   }
 }
 
@@ -31,7 +33,7 @@ export const TagSchema = new EntitySchema<Tag, CustomBaseEntity>({
     group: { type: 'string' },
 
     coefficient: { type: 'float', default: 1.0 },
-    entries: { entity: () => 'Entry', mappedBy: 'tags'}
+    entries: { reference: ReferenceType.MANY_TO_MANY, entity: () => 'Entry', mappedBy: 'tags' }
   }
 })
 
