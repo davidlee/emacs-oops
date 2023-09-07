@@ -43,7 +43,7 @@
     "eslint-plugin-prettier": "^5.0.0",
     "husky": "^8.0.3",
     "onchange": "^7.1.0",
-    "pnpm": "^8.7.1",
+    "pnpm": "^8.7.4",
     "prettier": "^3.0.3",
     "ts-node": "^10.9.1",
     "tsx": "^3.12.8",
